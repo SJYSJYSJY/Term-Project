@@ -1,0 +1,117 @@
+from cmu_112_graphics import *
+import math
+import random
+from dataclasses import make_dataclass
+
+def appStarted(app):
+    # app.cell = []
+    app.cellSize = 25
+    app.rows = app.height / app.cellSize
+    app.cols = app.width / (app.cellSize * math.sqrt(3))
+    (app.naziColor,app.sovietColor) = countryColor()
+    app.cellBound = dict()
+    app.color = dict()
+    app.coordinate = set()
+    app.selected = None
+
+def mousePressed(app,event):
+    isClicked = False
+    selectedX = event.x
+    selectedY = event.y
+    referenceLine = dict()
+    for row in range(int(app.rows)):
+        for col in range(int(app.cols)):
+            if row % 2 == 0:
+                left = math.sqrt(3) * app.cellSize * (col - 0.5)
+                right = (col + 0.5) * math.sqrt(3) * app.cellSize
+                up = app.cellSize * row * 1.5
+                down = app.cellSize * (row * 1.5 + 2)
+            else:
+                left = col * math.sqrt(3) * app.cellSize
+                right = (col + 1) * math.sqrt(3) * app.cellSize
+                up = row * 1.5 * app.cellSize
+                down = app.cellSize * (row * 1.5 + 2)
+            middleX = 0.5 * (right - left)
+            middleY = 0.5 * (down - up)
+            if isInHexagon(app,selectedX,selectedY,middleX,middleY):
+                isClicked = True
+                currRow = row
+                currCol = col
+                (darkGrey,fireBrick) = selectedColor(app)
+                if app.color[(currRow,currCol)] == app.sovietColor:
+                    app.color[(currRow,currCol)] == fireBrick
+                else:
+                    app.color[(currRow,currCol)] == darkGrey
+    
+
+# =================================Draw=========================================
+# Draw hexagon cells
+def rgbString(r, g, b):
+    return "#%02x%02x%02x" % (r,g,b)
+    
+def countryColor():
+    gainsboro = rgbString(220,220,220)
+    lightCoral = rgbString(240,128,128)
+    return (gainsboro,lightCoral)
+
+def selectedColor():
+    darkGrey = rgbString(169,169,169)
+    fireBrick = rgbString(178,34,34)
+    return (darkGrey,fireBrick)
+
+def perpendicularDistance(x,y,x0,y0):
+    horizontal = abs(x - x0)
+    vertical = abs(y - y0)
+    return (horizontal,vertical)
+
+def isInHexagon(app,x,y,x0,y0):
+    (distanceX,distanceY) = perpendicularDistance(x,y,x0,y0)
+    if distanceY >= app.cellSize // distanceX >= (math.sqrt(3) * app.cellSize) / 2:
+        return False
+    else:
+        if app.cellSize - distanceY > distanceX / (math.sqrt(3)):
+            return True
+        else:
+            return False
+
+
+def getHexagonCellBound(app):
+    cellBound = dict()
+    cellColor = dict()
+    for row in range(int(app.rows)):
+        for col in range(int(app.cols)):
+            if row % 2 == 0:
+                (x0,y0) = (col * math.sqrt(3) * app.cellSize, app.cellSize * row * 1.5)
+                (x1,y1) = (math.sqrt(3) * app.cellSize * (col - 0.5), app.cellSize * (row * 1.5 + 0.5))
+                (x2,y2) = (math.sqrt(3) * app.cellSize * (col - 0.5), app.cellSize * (row * 1.5 + 1.5))
+                (x3,y3) = (col * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 2))
+                (x4,y4) = ((col + 0.5) * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 1.5))
+                (x5,y5) = ((col + 0.5) * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 0.5))
+            else:
+                (x0,y0) = ((col + 0.5) * math.sqrt(3) * app.cellSize, row * 1.5 * app.cellSize)
+                (x1,y1) = (col * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 0.5))
+                (x2,y2) = (col * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 1.5))
+                (x3,y3) = ((col + 0.5) * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 2))
+                (x4,y4) = ((col + 1) * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 1.5))
+                (x5,y5) = ((col + 1) * math.sqrt(3) * app.cellSize, app.cellSize * (row * 1.5 + 0.5))
+            cellBound[(row,col)] = (x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5)
+            if x1 > app.width // 2:
+                cellColor[(row,col)] = app.sovietColor
+            else:
+                cellColor[(row,col)] = app.naziColor
+    return (cellBound,cellColor)
+
+def redrawAll(app,canvas):
+    (cellBound,cellColor) = getHexagonCellBound(app)
+    for row in range(int(app.rows)):
+        for col in range(int(app.cols)):
+            (x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5) = cellBound[(row,col)]
+            canvas.create_line(x0,y0,x1,y1,width = 2)
+            canvas.create_line(x1,y1,x2,y2,width = 2)
+            canvas.create_line(x2,y2,x3,y3,width = 2)
+            canvas.create_line(x3,y3,x4,y4,width = 2)
+            canvas.create_line(x4,y4,x5,y5,width = 2)
+            canvas.create_line(x5,y5,x0,y0,width = 2)
+            canvas.create_polygon(x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,fill = cellColor[(row,col)])
+
+runApp(width = 1280, height = 710)
